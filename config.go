@@ -2,13 +2,16 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 	"reflect"
 
+	dotaccess "github.com/go-bongo/go-dotaccess"
 	log "github.com/sirupsen/logrus"
 	yaml "gopkg.in/yaml.v2"
 )
@@ -17,9 +20,11 @@ var (
 	conf *Config
 )
 
+type ConfigMap interface{}
+
 type Config struct {
-	M    interface{} // user struct
-	file *string     // config file path
+	M    ConfigMap // user struct
+	file *string   // config file path
 }
 
 func readConfig() {
@@ -77,15 +82,59 @@ func readConfig() {
 }
 
 func Bind(st interface{}) {
+	conf = new(Config)
 	conf.M = st
 	// Read the config file
 	readConfig()
 }
 
 func Init() {
+	conf = new(Config)
 	readConfig()
 }
 
-func init() {
-	conf = new(Config)
+func Unmarshal(key string, st interface{}) error {
+	var val interface{}
+	var err error
+
+	val, err = dotaccess.Get(conf.M, key)
+	if err == nil {
+		var b []byte
+		b, err = json.Marshal(val)
+		if err == nil {
+			err = json.Unmarshal(b, st)
+			if err == nil {
+				fmt.Println(st)
+			}
+		}
+	}
+	return err
+}
+
+func String(key string) (string, error) {
+	val, err := dotaccess.Get(conf.M, key)
+	if err != nil {
+		return "", err
+	}
+
+	v, ok := val.(string)
+	if ok {
+		return v, nil
+	}
+
+	return "", errors.New("Invalid")
+}
+
+func Int(key string) (int, error) {
+	val, err := dotaccess.Get(conf.M, key)
+	if err != nil {
+		return 0, err
+	}
+
+	v, ok := val.(int)
+	if ok {
+		return v, nil
+	}
+
+	return 0, errors.New("Invalid")
 }
