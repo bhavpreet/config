@@ -138,3 +138,7 @@ func Int(key string) (int, error) {
 
 	return 0, errors.New("Invalid")
 }
+
+func Interface(key string) (interface{}, error) {
+	return dotaccess.Get(conf.M, key)
+}
